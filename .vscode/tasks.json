@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build EidVille",
+      "type": "shell",
+      "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
+      "args": ["-g", "main.cpp", "scene.cpp", "route.cpp", "-o", "eidville.exe",
+               "-static-libgcc", "-static-libstdc++",
+               "-lfreeglut", "-lopengl32", "-lglu32", "-lwinmm"],
+      "options": {
+        "env": { "PATH": "C:\\msys64\\ucrt64\\bin;${env:PATH}" }
+      },
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    }
+  ]
+}
