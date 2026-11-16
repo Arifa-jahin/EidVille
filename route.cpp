@@ -45,6 +45,51 @@ double totalRoadLength() {
     return s;
 }
 
+// ------------------------------------------------------------
+//  HOUSES
+//  Five houses, each standing beside one intersection.
+// ------------------------------------------------------------
+struct House {
+    const char* name;
+    int   node;            // road intersection beside the house
+    float hx, hy;          // bottom-left corner of the house
+    float r, g, b;         // wall colour
+};
+
+const int HN = 5;
+House houses[HN] = {
+    {"House 1", 2, 500, 140, 0.95f, 0.55f, 0.55f},   // beside C
+    {"House 2", 3, 740, 140, 0.55f, 0.70f, 0.95f},   // beside D
+    {"House 3", 5, 300, 400, 0.95f, 0.80f, 0.40f},   // beside F
+    {"House 4", 6, 500, 400, 0.70f, 0.55f, 0.90f},   // beside G
+    {"House 5", 7, 740, 400, 0.50f, 0.85f, 0.65f}    // beside H
+};
+const float HOUSE_W = 55, HOUSE_H = 42;
+
+// house: wall, red roof, door, two windows and its number
+void drawHouse(const House& h, int number) {
+    float k = night ? 0.6f : 1.0f;                   // darker at night
+    float x = h.hx, y = h.hy;
+    setColor(h.r * k, h.g * k, h.b * k);             // wall
+    rect(x, y, x + HOUSE_W, y + HOUSE_H);
+    setColor(0.65f * k, 0.15f * k, 0.15f * k);       // roof
+    triangle(x - 6, y + HOUSE_H, x + HOUSE_W + 6, y + HOUSE_H, x + HOUSE_W / 2, y + HOUSE_H + 26);
+    setColor(0.40f, 0.22f, 0.10f);                   // door
+    rect(x + 22, y, x + 33, y + 20);
+    if (night) setColor(1.0f, 0.88f, 0.40f);         // windows glow at night
+    else       setColor(0.75f, 0.90f, 1.0f);
+    rect(x + 6, y + 24, x + 18, y + 34);
+    rect(x + 37, y + 24, x + 49, y + 34);
+    setColor(1, 1, 1);                               // house number on the roof
+    char lbl[4];
+    sprintf(lbl, "%d", number);
+    drawText(x + HOUSE_W / 2 - 3, y + HOUSE_H + 6, lbl);
+}
+
+void drawHouses() {
+    for (int i = 0; i < HN; i++) drawHouse(houses[i], i + 1);
+}
+
 void routeInit() {
     // TODO (Arifa): build the road graph for Dijkstra
 }
@@ -105,7 +150,8 @@ void drawRoadLayer() {
     drawRoads();
     drawRoadLengths();
     drawNodes();
-    // TODO (Arifa): houses, routes
+    drawHouses();
+    // TODO (Arifa): routes
 }
 
 void drawPanel() {
@@ -122,6 +168,8 @@ void drawPanel() {
     drawText(818, WIN_H - 95, buf);
     sprintf(buf, "Total road length: %.0f m", totalRoadLength());
     drawText(818, WIN_H - 113, buf);
+    sprintf(buf, "Houses: %d", HN);
+    drawText(818, WIN_H - 131, buf);
 
     // TODO (Arifa): visiting order, distance, time, comparison
 }
