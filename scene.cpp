@@ -51,10 +51,58 @@ void drawSkyAndGround() {
     }
 }
 
+// mosque: two minarets, main hall, green dome, crescents, door, arched windows
+void drawMosque() {
+    float wall = night ? 0.70f : 0.95f;
+
+    setColor(wall, wall * 0.96f, wall * 0.86f);      // minarets
+    rect(300, 580, 318, 725);
+    rect(482, 580, 500, 725);
+    setColor(0.10f, 0.55f, 0.45f);
+    halfCircle(309, 725, 12);
+    halfCircle(491, 725, 12);
+    rect(298, 690, 320, 696);                         // minaret balconies
+    rect(480, 690, 502, 696);
+
+    setColor(wall, wall * 0.96f, wall * 0.86f);      // main hall
+    rect(325, 580, 475, 665);
+    setColor(0.10f, 0.55f, 0.45f);
+    rect(320, 660, 480, 668);
+
+    setColor(0.12f, 0.62f, 0.50f);                    // big dome
+    halfCircle(400, 668, 52);
+
+    setColor(1.0f, 0.85f, 0.25f);                     // crescents on top
+    rect(399, 720, 401, 732);
+    crescent(400, 742, 9);
+    crescent(309, 746, 5);
+    crescent(491, 746, 5);
+
+    setColor(0.40f, 0.22f, 0.10f);                    // door
+    rect(386, 580, 414, 610);
+    halfCircle(400, 610, 14);
+
+    if (night) setColor(1.0f, 0.88f, 0.40f);          // windows glow at night
+    else       setColor(0.55f, 0.80f, 0.95f);
+    rect(342, 615, 358, 640);  halfCircle(350, 640, 8);
+    rect(442, 615, 458, 640);  halfCircle(450, 640, 8);
+}
+
+// Eidgah: open prayer ground in front of the mosque
+void drawEidgah() {
+    if (night) setColor(0.42f, 0.38f, 0.30f);
+    else       setColor(0.93f, 0.86f, 0.66f);
+    rect(280, 472, 520, 580);
+    setColor(0.85f, 0.75f, 0.50f);                    // prayer rows
+    for (int i = 0; i < 4; i++) rect(295, 490 + i * 20, 505, 492 + i * 20);
+}
+
 // sky, ground and everything behind the roads
 void drawBackground() {
     drawSkyAndGround();
-    // TODO (Ijma): mosque, Eidgah, people, mela, lanterns ...
+    drawEidgah();
+    drawMosque();
+    // TODO (Ijma): people, mela, lanterns ...
 }
 
 // things drawn on top of the roads and houses
