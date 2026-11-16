@@ -66,20 +66,50 @@ House houses[HN] = {
 };
 const float HOUSE_W = 55, HOUSE_H = 42;
 
-// house: wall, red roof, door, two windows and its number
+// soft shadow on the ground (this file only)
+static void groundShadow(float cx, float cy, float rx, float ry) {
+    glColor4f(0, 0, 0, 0.20f);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(cx, cy);
+    for (int i = 0; i <= 40; i++) {
+        float t = 2 * PI * i / 40;
+        glVertex2f(cx + rx * cos(t), cy + ry * sin(t));
+    }
+    glEnd();
+}
+
+// house: shaded wall, two-tone roof, chimney, door, framed windows and its number
 void drawHouse(const House& h, int number) {
     float k = night ? 0.6f : 1.0f;                   // darker at night
-    float x = h.hx, y = h.hy;
-    setColor(h.r * k, h.g * k, h.b * k);             // wall
-    rect(x, y, x + HOUSE_W, y + HOUSE_H);
-    setColor(0.65f * k, 0.15f * k, 0.15f * k);       // roof
-    triangle(x - 6, y + HOUSE_H, x + HOUSE_W + 6, y + HOUSE_H, x + HOUSE_W / 2, y + HOUSE_H + 26);
-    setColor(0.40f, 0.22f, 0.10f);                   // door
+    float x = h.hx, y = h.hy, W = HOUSE_W, H = HOUSE_H;
+    groundShadow(x + W / 2 + 4, y, W * 0.62f, 6);
+
+    setColor(h.r * k, h.g * k, h.b * k);             // wall (front)
+    rect(x, y, x + W, y + H);
+    setColor(h.r * k * 0.82f, h.g * k * 0.82f, h.b * k * 0.82f);   // wall (side in shade)
+    rect(x + W * 0.72f, y, x + W, y + H);
+
+    setColor(0.45f * k, 0.25f * k, 0.20f * k);       // chimney
+    rect(x + W - 16, y + H + 8, x + W - 8, y + H + 24);
+    setColor(0.72f * k, 0.18f * k, 0.16f * k);       // roof (lit half)
+    triangle(x - 6, y + H, x + W / 2, y + H, x + W / 2, y + H + 26);
+    setColor(0.55f * k, 0.12f * k, 0.12f * k);       // roof (shaded half)
+    triangle(x + W / 2, y + H, x + W + 6, y + H, x + W / 2, y + H + 26);
+
+    setColor(0.40f, 0.22f, 0.10f);                   // door with step
     rect(x + 22, y, x + 33, y + 20);
-    if (night) setColor(1.0f, 0.88f, 0.40f);         // windows glow at night
-    else       setColor(0.75f, 0.90f, 1.0f);
+    setColor(0.85f * k, 0.85f * k, 0.82f * k);
+    rect(x + 19, y, x + 36, y + 2);
+    setColor(0.95f * k, 0.95f * k, 0.95f * k);       // window frames
+    rect(x + 5, y + 23, x + 19, y + 35);
+    rect(x + 36, y + 23, x + 50, y + 35);
+    if (night) setColor(1.0f, 0.86f, 0.40f);         // windows glow at night
+    else       setColor(0.62f, 0.82f, 0.95f);
     rect(x + 6, y + 24, x + 18, y + 34);
     rect(x + 37, y + 24, x + 49, y + 34);
+    setColor(0.95f * k, 0.95f * k, 0.95f * k);       // window cross bars
+    rect(x + 11.5f, y + 24, x + 12.5f, y + 34);
+    rect(x + 42.5f, y + 24, x + 43.5f, y + 34);
     setColor(1, 1, 1);                               // house number on the roof
     char lbl[4];
     sprintf(lbl, "%d", number);
@@ -89,14 +119,21 @@ void drawHouse(const House& h, int number) {
 void drawHouses() {
     for (int i = 0; i < HN; i++) drawHouse(houses[i], i + 1);
 }
-
 void routeInit() {
     // TODO (Arifa): build the road graph for Dijkstra
 }
 
-// grey roads with a dashed white centre line
+// roads: light footpath edge, dark asphalt, dashed centre line
 void drawRoads() {
-    float rc = night ? 0.22f : 0.35f;
+    float pv = night ? 0.45f : 0.78f;                 // footpath / kerb
+    setColor(pv, pv, pv * 0.96f);
+    for (int k = 0; k < E_COUNT; k++) {
+        Node a = nodes[edges[k].u], b = nodes[edges[k].v];
+        thickLine(a.x, a.y, b.x, b.y, 34);
+    }
+    for (int i = 0; i < N; i++) circle(nodes[i].x, nodes[i].y, 17);
+
+    float rc = night ? 0.18f : 0.30f;                 // asphalt
     setColor(rc, rc, rc + 0.03f);
     for (int k = 0; k < E_COUNT; k++) {
         Node a = nodes[edges[k].u], b = nodes[edges[k].v];
@@ -104,7 +141,7 @@ void drawRoads() {
     }
     for (int i = 0; i < N; i++) circle(nodes[i].x, nodes[i].y, 13);   // round corners
 
-    setColor(0.95f, 0.95f, 0.85f);
+    setColor(1.0f, 0.88f, 0.45f);                     // yellow centre line
     glEnable(GL_LINE_STIPPLE);
     glLineStipple(2, 0x00FF);
     glLineWidth(1.5f);
@@ -121,6 +158,8 @@ void drawRoads() {
 // small white circle with the intersection's letter
 void drawNodes() {
     for (int i = 0; i < N; i++) {
+        setColor(0.15f, 0.20f, 0.35f);              // dark ring
+        circle(nodes[i].x, nodes[i].y, 10);
         setColor(1, 1, 1);
         circle(nodes[i].x, nodes[i].y, 8);
         setColor(0.1f, 0.1f, 0.1f);
@@ -139,6 +178,8 @@ void drawRoadLengths() {
         sprintf(buf, "%.0f m", nodeDist(edges[k].u, edges[k].v));
         int w = 0;
         for (char* c = buf; *c; c++) w += glutBitmapWidth(GLUT_BITMAP_HELVETICA_10, *c);
+        setColor(0.15f, 0.20f, 0.35f);            // label border
+        rect(mx - w / 2.0f - 4, my - 7, mx + w / 2.0f + 4, my + 9);
         setColor(1, 1, 1);
         rect(mx - w / 2.0f - 3, my - 6, mx + w / 2.0f + 3, my + 8);
         setColor(0.15f, 0.15f, 0.2f);
@@ -154,22 +195,44 @@ void drawRoadLayer() {
     // TODO (Arifa): routes
 }
 
+// ---------- panel helpers (this file only) ----------
+// a card = slightly lighter box with a gold title, returns y below the title
+static float panelCard(float y0, float h, const char* title) {
+    setColor(0.16f, 0.19f, 0.29f);
+    rect(814, y0 - h, WIN_W - 14, y0);
+    setColor(1.0f, 0.82f, 0.3f);
+    rect(814, y0 - 2, WIN_W - 14, y0);              // gold line on top of the card
+    drawText(824, y0 - 20, title, GLUT_BITMAP_HELVETICA_12);
+    return y0 - 40;
+}
+
+// one row: label on the left, value on the right
+static void panelRow(float y, const char* label, const char* value) {
+    setColor(0.70f, 0.74f, 0.82f);
+    drawText(824, y, label, GLUT_BITMAP_HELVETICA_12);
+    int w = 0;
+    for (const char* c = value; *c; c++) w += glutBitmapWidth(GLUT_BITMAP_HELVETICA_12, *c);
+    setColor(1, 1, 1);
+    drawText(WIN_W - 24 - w, y, value, GLUT_BITMAP_HELVETICA_12);
+}
+
 void drawPanel() {
-    setColor(0.11f, 0.13f, 0.21f);              // panel background
+    setColor(0.10f, 0.12f, 0.19f);              // panel background
     rect(800, 0, WIN_W, WIN_H);
+    setColor(0.07f, 0.09f, 0.15f);              // header bar
+    rect(800, WIN_H - 70, WIN_W, WIN_H);
     setColor(1.0f, 0.82f, 0.3f);
     rect(800, 0, 803, WIN_H);                   // gold border
-    drawText(818, WIN_H - 35, "EidVille", GLUT_BITMAP_HELVETICA_18);
-    setColor(1, 1, 1);
-    drawText(818, WIN_H - 60, "Smart Eid Gift Exchange", GLUT_BITMAP_HELVETICA_12);
+    drawText(818, WIN_H - 32, "EidVille", GLUT_BITMAP_TIMES_ROMAN_24);
+    setColor(0.75f, 0.80f, 0.90f);
+    drawText(818, WIN_H - 55, "Smart Eid Gift Exchange Simulator", GLUT_BITMAP_HELVETICA_12);
 
-    char buf[60];
-    sprintf(buf, "Road network: %d intersections, %d roads", N, E_COUNT);
-    drawText(818, WIN_H - 95, buf);
-    sprintf(buf, "Total road length: %.0f m", totalRoadLength());
-    drawText(818, WIN_H - 113, buf);
-    sprintf(buf, "Houses: %d", HN);
-    drawText(818, WIN_H - 131, buf);
+    char buf[40];
+    float y = panelCard(WIN_H - 85, 100, "ROAD NETWORK");
+    sprintf(buf, "%d", N);                      panelRow(y, "Intersections", buf);
+    sprintf(buf, "%d", E_COUNT);                panelRow(y - 18, "Roads", buf);
+    sprintf(buf, "%.0f m", totalRoadLength());  panelRow(y - 36, "Total length", buf);
+    sprintf(buf, "%d", HN);                     panelRow(y - 54, "Houses", buf);
 
     // TODO (Arifa): visiting order, distance, time, comparison
 }
