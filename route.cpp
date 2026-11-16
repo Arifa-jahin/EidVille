@@ -32,6 +32,19 @@ Edge edges[] = {
 };
 const int E_COUNT = sizeof(edges) / sizeof(edges[0]);
 
+// length of the road between two intersections (metres)
+// Euclidean distance: sqrt((x1-x2)^2 + (y1-y2)^2)
+double nodeDist(int a, int b) {
+    double dx = nodes[a].x - nodes[b].x, dy = nodes[a].y - nodes[b].y;
+    return sqrt(dx * dx + dy * dy);
+}
+
+double totalRoadLength() {
+    double s = 0;
+    for (int k = 0; k < E_COUNT; k++) s += nodeDist(edges[k].u, edges[k].v);
+    return s;
+}
+
 void routeInit() {
     // TODO (Arifa): build the road graph for Dijkstra
 }
@@ -71,8 +84,26 @@ void drawNodes() {
     }
 }
 
+// road length written in a small box at the middle of each road
+void drawRoadLengths() {
+    for (int k = 0; k < E_COUNT; k++) {
+        Node a = nodes[edges[k].u], b = nodes[edges[k].v];
+        float mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        if (k == 10) { mx -= 22; my += 8; }       // diagonal: move label off the line
+        char buf[16];
+        sprintf(buf, "%.0f m", nodeDist(edges[k].u, edges[k].v));
+        int w = 0;
+        for (char* c = buf; *c; c++) w += glutBitmapWidth(GLUT_BITMAP_HELVETICA_10, *c);
+        setColor(1, 1, 1);
+        rect(mx - w / 2.0f - 3, my - 6, mx + w / 2.0f + 3, my + 8);
+        setColor(0.15f, 0.15f, 0.2f);
+        drawText(mx - w / 2.0f, my - 2, buf, GLUT_BITMAP_HELVETICA_10);
+    }
+}
+
 void drawRoadLayer() {
     drawRoads();
+    drawRoadLengths();
     drawNodes();
     // TODO (Arifa): houses, routes
 }
@@ -89,6 +120,8 @@ void drawPanel() {
     char buf[60];
     sprintf(buf, "Road network: %d intersections, %d roads", N, E_COUNT);
     drawText(818, WIN_H - 95, buf);
+    sprintf(buf, "Total road length: %.0f m", totalRoadLength());
+    drawText(818, WIN_H - 113, buf);
 
     // TODO (Arifa): visiting order, distance, time, comparison
 }
