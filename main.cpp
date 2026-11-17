@@ -5,6 +5,10 @@
 #include "common.h"
 
 int frameNo = 0;
+int slide = 1;                 // 1 = Chand Raat, 2 = EidVille town, 3 = Eid for everyone
+int slideFrame = 0;            // frames since the current slide appeared
+int nextSlide = 1;             // slide we are moving to
+float slideMove = 0;           // 0..1 progress of the sliding animation
 int vpX = 0, vpY = 0, vpW = SCR_W, vpH = SCR_H;   // drawing area inside the window
 
 // ---------------- drawing helpers ----------------
@@ -64,25 +68,81 @@ void drawTextCentered(float cx, float y, const char* s, void* font) {
     drawText(cx - w / 2.0f, y, s, font);
 }
 
-// ---------------- GLUT callbacks ----------------
-void display() {
-    glClear(GL_COLOR_BUFFER_BIT);
-    glLoadIdentity();
+// ---------------- slides ----------------
+void drawTown() {
     drawBackground();     // Ijma
     drawRoadLayer();      // Arifa
     drawForeground();     // Ijma
     drawPanel();          // Arifa
+}
+
+void drawSlide(int s) {
+    if (s == 1)      drawMoonNight();
+    else if (s == 2) drawTown();
+    else             drawSharing();
+}
+
+// three dots at the bottom show which slide is open
+void drawSlideDots() {
+    for (int i = 1; i <= 3; i++) {
+        glColor4f(0, 0, 0, 0.35f);
+        circle(520 + (i - 1) * 30, 14, 8);
+        glColor4f(1, 1, 1, i == slide ? 1.0f : 0.45f);
+        circle(520 + (i - 1) * 30, 14, i == slide ? 5.5f : 4);
+    }
+    glColor4f(1, 1, 1, 0.6f);
+    drawText(380, 9, "<  Left / Right arrow  >", GLUT_BITMAP_HELVETICA_10);
+}
+
+void goToSlide(int s) {
+    if (s < 1 || s > 3 || s == slide || slideMove > 0) return;
+    nextSlide = s;
+    slideMove = 0.001f;               // start the sliding animation
+}
+
+// ---------------- GLUT callbacks ----------------
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT);
+    glLoadIdentity();
+    if (slideMove > 0) {
+        // smooth movement: slow at the start and the end
+        float t = slideMove * slideMove * (3 - 2 * slideMove);
+        float dir = (nextSlide > slide) ? 1.0f : -1.0f;
+        glPushMatrix();
+        glTranslatef(-dir * t * WIN_W, 0, 0);           // old slide moves out
+        drawSlide(slide);
+        glPopMatrix();
+        glPushMatrix();
+        glTranslatef(dir * (1 - t) * WIN_W, 0, 0);      // new slide comes in
+        drawSlide(nextSlide);
+        glPopMatrix();
+    } else {
+        drawSlide(slide);
+    }
+    drawSlideDots();
     glutSwapBuffers();
 }
 
 void keyboard(unsigned char key, int, int) {
     if (key == 27) exit(0);   // ESC
-    sceneKey(key);
-    routeKey(key);
+    if (slide == 2) {         // town keys only work on the town slide
+        sceneKey(key);
+        routeKey(key);
+    } else if (key == ' ') {
+        slideFrame = 0;       // SPACE: play the slide's story again
+    }
+}
+
+void specialKey(int key, int, int) {
+    if (key == GLUT_KEY_RIGHT) goToSlide(slide + 1);
+    if (key == GLUT_KEY_LEFT)  goToSlide(slide - 1);
 }
 
 void mouse(int button, int state, int mx, int my) {
     if (state != GLUT_DOWN) return;
+    if (button == 3) { goToSlide(slide - 1); return; }   // mouse wheel up
+    if (button == 4) { goToSlide(slide + 1); return; }   // mouse wheel down
+    if (slide != 2) return;
     float wx = (mx - vpX) * (float)WIN_W / vpW;                              // window pixel
     float wy = (glutGet(GLUT_WINDOW_HEIGHT) - my - vpY) * (float)WIN_H / vpH; // -> world
     routeMouse(button, wx, wy);
@@ -90,6 +150,11 @@ void mouse(int button, int state, int mx, int my) {
 
 void timer(int) {
     frameNo++;
+    slideFrame++;
+    if (slideMove > 0) {
+        slideMove += 0.025f;          // about 40 frames for one slide change
+        if (slideMove >= 1) { slideMove = 0; slide = nextSlide; slideFrame = 0; }
+    }
     sceneUpdate();
     routeUpdate();
     glutPostRedisplay();
@@ -127,6 +192,7 @@ int main(int argc, char** argv) {
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutKeyboardFunc(keyboard);
+    glutSpecialFunc(specialKey);
     glutMouseFunc(mouse);
     glutTimerFunc(16, timer, 0);
     glutMainLoop();
