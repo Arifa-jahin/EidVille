@@ -176,6 +176,7 @@ vector<int> hp[HN][HN];                 // shortest node path house i -> house j
 struct Plan {
     vector<int> order;                  // houses in visiting order
     vector<int> path;                   // full node path to walk
+    vector<int> stopIdx;                // position in path where each house is reached
     double m;                           // total metres, -1 = no plan
     Plan() : m(-1) {}
 };
@@ -212,6 +213,7 @@ void makePlan(Plan& p, const vector<int>& order) {
         p.m += hd[cur][order[k]];
         const vector<int>& seg = hp[cur][order[k]];
         for (size_t s = 1; s < seg.size(); s++) p.path.push_back(seg[s]);
+        p.stopIdx.push_back((int)p.path.size() - 1);
         cur = order[k];
     }
 }
@@ -254,8 +256,40 @@ void computePlans() {
     makePlan(planOptimal, bestOrder);
 }
 
+// ------------------------------------------------------------
+//  WALKING THE ROUTE
+// ------------------------------------------------------------
+Plan* runPlan = 0;                      // the plan being walked (0 = none)
+const char* runName = "";
+int   seg = 0;                          // current road segment in runPlan->path
+float segT = 0;                         // 0..1 progress on that segment
+int   nextStop = 0;                     // which house in the order comes next
+int   pauseFrames = 0;                  // waiting at a house while giving the gift
+bool  gotGift[HN] = {false};
+bool  finished = false;
+const float WALK_SPEED = 1.4f;          // pixels per frame on the screen
+
+void placeWalkerAtSender() {
+    walkerX = nodes[houses[sender].node].x;
+    walkerY = nodes[houses[sender].node].y;
+    walkerAngle = 0;
+    walking = false; finished = false;
+    runPlan = 0; seg = 0; segT = 0; nextStop = 0; pauseFrames = 0;
+    giftsLeft = 0;
+    for (int i = 0; i < HN; i++) gotGift[i] = false;
+}
+
+void startWalk(Plan* p, const char* name) {
+    if (walking || p->m < 0 || p->path.size() < 2) return;
+    placeWalkerAtSender();
+    runPlan = p; runName = name;
+    walking = true;
+    giftsLeft = (int)p->order.size();
+}
+
 void routeInit() {
     computePlans();
+    placeWalkerAtSender();
 }
 
 // roads: light footpath edge, dark asphalt, dashed centre line
@@ -327,8 +361,9 @@ void drawHouseMarks() {
             triangle(cx - 9, top + 16 + bob, cx + 9, top + 16 + bob, cx, top + bob);
         }
     }
-    for (size_t k = 0; k < planOptimal.order.size(); k++) {       // 1st, 2nd, 3rd ... stop
-        const House& h = houses[planOptimal.order[k]];
+    const Plan& shown = runPlan ? *runPlan : planOptimal;
+    for (size_t k = 0; k < shown.order.size(); k++) {             // 1st, 2nd, 3rd ... stop
+        const House& h = houses[shown.order[k]];
         setColor(0.15f, 0.20f, 0.35f); circle(h.hx - 4, h.hy + HOUSE_H + 12, 10);
         setColor(1.0f, 0.85f, 0.25f);  circle(h.hx - 4, h.hy + HOUSE_H + 12, 8.5f);
         setColor(0.1f, 0.1f, 0.1f);
@@ -371,12 +406,32 @@ void drawRoadLengths() {
 
 void drawRoadLayer() {
     drawRoads();
-    drawPlanPath(planNumber, 1.0f, 0.55f, 0.10f, 5, true, 6);     // orange dashed = house number order
-    drawPlanPath(planOptimal, 0.10f, 0.85f, 0.35f, 7, false, 0);  // green = optimal route
+    if (!runPlan) {
+        drawPlanPath(planNumber, 1.0f, 0.55f, 0.10f, 5, true, 6);     // orange dashed = house number order
+        drawPlanPath(planOptimal, 0.10f, 0.85f, 0.35f, 7, false, 0);  // green = optimal route
+    } else {
+        if (runPlan == &planOptimal)      drawPlanPath(*runPlan, 0.10f, 0.85f, 0.35f, 7, false, 0);
+        else if (runPlan == &planNearest) drawPlanPath(*runPlan, 0.30f, 0.85f, 0.95f, 7, false, 0);
+        else                              drawPlanPath(*runPlan, 1.0f, 0.55f, 0.10f, 7, false, 0);
+        vector<int>& path = runPlan->path;                            // yellow = already walked
+        glColor4f(1.0f, 0.90f, 0.15f, 0.95f);
+        glLineWidth(7);
+        glBegin(GL_LINE_STRIP);
+        for (int i = 0; i <= seg && i < (int)path.size(); i++) glVertex2f(nodes[path[i]].x, nodes[path[i]].y);
+        glVertex2f(walkerX, walkerY);
+        glEnd();
+        glLineWidth(1);
+    }
     drawRoadLengths();
     drawNodes();
     drawHouses();
     drawHouseMarks();
+    for (int i = 0; i < HN; i++) {                                    // gift box at houses that got one
+        if (!gotGift[i]) continue;
+        float gx = houses[i].hx + HOUSE_W - 8, gy = houses[i].hy;
+        setColor(0.90f, 0.20f, 0.30f); rect(gx, gy, gx + 12, gy + 10);
+        setColor(1.0f, 0.85f, 0.25f);  rect(gx + 5, gy, gx + 7, gy + 10); rect(gx, gy + 4, gx + 12, gy + 6);
+    }
 }
 
 // ---------- panel helpers (this file only) ----------
@@ -419,15 +474,20 @@ void drawPanel() {
     panelRow(y - 51, "Eidgah road F-G", edges[EIDGAH_ROAD].closed ? "CLOSED" : "open");
 
     // who sends, who receives
-    y = panelCard(WIN_H - 200, 71, "GIFT EXCHANGE");
+    y = panelCard(WIN_H - 200, 88, "GIFT EXCHANGE");
     sprintf(buf, "House %d", sender + 1);       panelRow(y, "From", buf);
     char to[40] = ""; int cnt = 0;
     for (int i = 0; i < HN; i++)
         if (receiver[i] && i != sender) { char t[16]; sprintf(t, cnt ? ", %d" : "%d", i + 1); strcat(to, t); cnt++; }
     panelRow(y - 17, "To", cnt ? to : "press 1-5");
+    if (walking)       sprintf(buf, "walking (%s) %d/%d", runName, nextStop, (int)runPlan->order.size());
+    else if (finished) sprintf(buf, "all gifts delivered!");
+    else if (cnt)      sprintf(buf, "press S, G or A to walk");
+    else               sprintf(buf, "-");
+    panelRow(y - 34, "Status", buf);
 
     // the three methods
-    y = panelCard(WIN_H - 283, 190, "VISITING ORDER");
+    y = panelCard(WIN_H - 300, 190, "VISITING ORDER");
     const char* names[3] = {"By house number", "Nearest neighbour", "Optimal (all orders)"};
     float mc[3][3] = {{1.0f, 0.60f, 0.20f}, {0.30f, 0.85f, 0.95f}, {0.30f, 0.90f, 0.45f}};
     Plan* plans[3] = {&planNumber, &planNearest, &planOptimal};
@@ -447,7 +507,7 @@ void drawPanel() {
     }
 
     // how much the optimal order saves
-    y = panelCard(WIN_H - 485, 105, "RESULT");
+    y = panelCard(WIN_H - 502, 90, "RESULT");
     if (cnt && planNumber.m > 0 && planOptimal.m >= 0) {
         double saved = planNumber.m - planOptimal.m;
         sprintf(buf, "%.0f m  (%.1f%%)", saved, saved / planNumber.m * 100);
@@ -474,8 +534,8 @@ void drawPanel() {
     // controls
     y = panelCard(150, 130, "CONTROLS");
     const char* help[6] = {"1-5 / left click   add or remove receiver", "F / right click     change sender",
-                           "X     close / open Eidgah road", "N     day / night",
-                           "R     reset", "ESC  exit"};
+                           "S / G / A   walk: optimal / nearest / number",
+                           "X     close / open Eidgah road", "N     day / night     R  reset", "ESC  exit"};
     setColor(0.80f, 0.83f, 0.90f);
     for (int i = 0; i < 6; i++) drawText(824, y - i * 15, help[i], GLUT_BITMAP_HELVETICA_10);
 }
@@ -485,29 +545,41 @@ void resetRoute() {
     sender = 2;
     edges[EIDGAH_ROAD].closed = false;
     computePlans();
+    placeWalkerAtSender();
 }
 
 void toggleReceiver(int i) {
-    if (i == sender) return;
+    if (walking || i == sender) return;
     receiver[i] = !receiver[i];
     computePlans();
+    placeWalkerAtSender();
 }
 
 void setSender(int i) {
+    if (walking) return;
     sender = i;
     receiver[i] = false;                // a house does not send to itself
     computePlans();
+    placeWalkerAtSender();
 }
 
 void routeKey(unsigned char key) {
     if (key >= '1' && key <= '5') { toggleReceiver(key - '1'); return; }
     if (key == 'f' || key == 'F') setSender((sender + 1) % HN);
-    if (key == 'x' || key == 'X') { edges[EIDGAH_ROAD].closed = !edges[EIDGAH_ROAD].closed; computePlans(); }
-    if (key == 'r' || key == 'R') resetRoute();
+    if ((key == 'x' || key == 'X') && !walking) {
+        edges[EIDGAH_ROAD].closed = !edges[EIDGAH_ROAD].closed;
+        computePlans();
+        placeWalkerAtSender();
+    }
+    if (key == 's' || key == 'S') startWalk(&planOptimal, "optimal");
+    if (key == 'g' || key == 'G') startWalk(&planNearest, "nearest");
+    if (key == 'a' || key == 'A') startWalk(&planNumber, "house number");
+    if ((key == 'r' || key == 'R') && !walking) resetRoute();
 }
 
 // click on a house: left = receiver on/off, right = make it the sender
 void routeMouse(int button, float wx, float wy) {
+    if (walking) return;
     for (int i = 0; i < HN; i++) {
         const House& h = houses[i];
         if (wx >= h.hx - 6 && wx <= h.hx + HOUSE_W + 6 && wy >= h.hy && wy <= h.hy + HOUSE_H + 26) {
@@ -518,6 +590,29 @@ void routeMouse(int button, float wx, float wy) {
     }
 }
 
+// move the boy a little along the route every frame
 void routeUpdate() {
-    // TODO (Arifa): move the gift carrier along the route
+    if (!walking || !runPlan) return;
+    if (pauseFrames > 0) { pauseFrames--; return; }            // giving the gift
+    vector<int>& path = runPlan->path;
+    Node a = nodes[path[seg]], b = nodes[path[seg + 1]];
+    float len = sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+    segT += WALK_SPEED / len;
+    walkerAngle = atan2(b.y - a.y, b.x - a.x);
+    if (segT >= 1) {                                           // reached the next intersection
+        segT = 0; seg++;
+        if (nextStop < (int)runPlan->stopIdx.size() && seg == runPlan->stopIdx[nextStop]) {
+            gotGift[runPlan->order[nextStop]] = true;          // gift delivered here
+            giftsLeft--; nextStop++;
+            pauseFrames = 45;
+        }
+        if (seg >= (int)path.size() - 1) {                     // last house: finished
+            walkerX = b.x; walkerY = b.y;
+            walking = false; finished = true;
+            return;
+        }
+        a = nodes[path[seg]]; b = nodes[path[seg + 1]];
+    }
+    walkerX = a.x + (b.x - a.x) * segT;                        // linear interpolation
+    walkerY = a.y + (b.y - a.y) * segT;
 }
