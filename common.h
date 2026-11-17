@@ -6,12 +6,18 @@
 //    main.cpp   -> window, timer, helpers (shared, change rarely)
 //    scene.cpp  -> Ijma  : Eid town graphics and animation
 //    route.cpp  -> Arifa : road graph, Dijkstra, visiting order, panel
+//    moonnight.cpp -> Ijma  : slide 1, Chand Raat
+//    sharing.cpp   -> Arifa : slide 3, Eid for everyone
 // ============================================================
 #ifndef COMMON_H
 #define COMMON_H
 
 #ifdef _WIN32
 #include <windows.h>
+// ---------- slides ----------
+void drawMoonNight();                    // moonnight.cpp (Ijma)  : slide 1
+void drawSharing();                      // sharing.cpp   (Arifa) : slide 3
+
 #endif
 #include <GL/glut.h>
 #include <cmath>
@@ -32,6 +38,9 @@ extern bool  night;                      // scene.cpp : day / night
 extern float walkerX, walkerY;           // route.cpp : position of the gift carrier
 extern float walkerAngle;                // route.cpp : walking direction (degree)
 extern bool  walking;                    // route.cpp : is the carrier walking now?
+extern int   giftsLeft;                  // route.cpp : gifts still in the basket
+extern int   slide;                      // main.cpp  : which slide is shown (1, 2, 3)
+extern int   slideFrame;                 // main.cpp  : frames since this slide appeared
 
 // ---------- drawing helpers (main.cpp) ----------
 void setColor(float r, float g, float b);
@@ -56,5 +65,9 @@ void drawPanel();                        // right side information panel
 void routeKey(unsigned char key);        // algorithm keys (1-5, S, G, A ...)
 void routeMouse(int button, float wx, float wy);
 void routeUpdate();                      // called every frame
+
+// ---------- slides ----------
+void drawMoonNight();                    // moonnight.cpp (Ijma)  : slide 1
+void drawSharing();                      // sharing.cpp   (Arifa) : slide 3
 
 #endif

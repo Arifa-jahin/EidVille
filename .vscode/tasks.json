@@ -5,7 +5,8 @@
       "label": "Build EidVille",
       "type": "shell",
       "command": "C:\\msys64\\ucrt64\\bin\\g++.exe",
-      "args": ["-g", "main.cpp", "scene.cpp", "route.cpp", "-o", "eidville.exe",
+      "args": ["-g", "main.cpp", "scene.cpp", "route.cpp",
+               "moonnight.cpp", "sharing.cpp", "-o", "eidville.exe",
                "-static-libgcc", "-static-libstdc++",
                "-lfreeglut", "-lopengl32", "-lglu32", "-lwinmm"],
       "options": {
