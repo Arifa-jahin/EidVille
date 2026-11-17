@@ -3,6 +3,9 @@
 //  Owner: Ijma
 // ============================================================
 #include "common.h"
+extern int giftsLeft;                  // defined in route.cpp (gifts not delivered yet)
+
+
 
 bool night = false;
 float skyR, skyG, skyB;                // current sky colour (used for the crescent)
@@ -21,7 +24,10 @@ void star(float cx, float cy, float R) {
 }
 
 // crescent moon drawn as a real shape (works on any sky colour)
+// it is the part of a circle that is NOT covered by a second, shifted circle
 void crescent(float cx, float cy, float r) {
+    // angles (degree) where the two circles meet, worked out once:
+    // outer circle from 78.6 to 324.5, inner circle from 102.4 to 300.7
     float ox1 = 78.6f, ox2 = 324.5f, ix1 = 102.4f, ix2 = 300.7f;
     float icx = cx + r * 0.38f, icy = cy + r * 0.15f, ir = r * 0.85f;
     setColor(1.0f, 0.85f, 0.25f);
@@ -36,6 +42,7 @@ void crescent(float cx, float cy, float r) {
     glEnd();
 }
 
+// ---------- small helpers for this file only ----------
 // rectangle whose colour changes smoothly from bottom to top (gradient)
 static void gradRect(float x1, float y1, float x2, float y2,
                      float r1, float g1, float b1, float r2, float g2, float b2) {
@@ -80,7 +87,9 @@ static void shadedDome(float cx, float cy, float r) {
     }
     glVertex2f(cx + r, cy);
     glEnd();
-}// sky, ground, sun (day) or moon and stars (night)
+}
+
+// sky, ground, sun (day) or moon and stars (night)
 void drawSkyAndGround() {
     // sky: deep colour at the top, light near the horizon
     if (night) { skyR = 0.06f; skyG = 0.08f; skyB = 0.22f;
@@ -191,17 +200,187 @@ void drawEidgah() {
         }
 }
 
+// ------------------------------------------------------------
+//  TOWN DECORATION: clouds, birds, trees, street lamps, lights
+// ------------------------------------------------------------
+static void cloud(float x, float y, float s) {
+    float c[6][3] = {{0,0,16},{18,5,19},{38,0,15},{-17,-2,13},{9,8,15},{28,-5,13}};
+    glColor4f(0.88f, 0.92f, 0.97f, 0.95f);
+    for (int i = 0; i < 6; i++) circle(x + c[i][0] * s, y + c[i][1] * s - 2 * s, c[i][2] * s);
+    glColor4f(1, 1, 1, 0.95f);
+    for (int i = 0; i < 6; i++) circle(x + c[i][0] * s, y + c[i][1] * s + 2 * s, c[i][2] * s * 0.9f);
+}
+
+static void bird(float x, float y, float flap) {
+    setColor(0.15f, 0.15f, 0.20f);
+    glLineWidth(2);
+    glBegin(GL_LINE_STRIP);
+    glVertex2f(x - 8, y + flap); glVertex2f(x - 3, y + 2); glVertex2f(x, y);
+    glVertex2f(x + 3, y + 2);    glVertex2f(x + 8, y + flap);
+    glEnd();
+    glLineWidth(1);
+}
+
+static void tree(float x, float y, float s) {
+    float k = night ? 0.55f : 1.0f;
+    shadow(x + 4, y, 16 * s, 4 * s);
+    setColor(0.42f * k, 0.27f * k, 0.15f * k);
+    rect(x - 3 * s, y, x + 3 * s, y + 18 * s);
+    float sway = 1.5f * sin(frameNo * 0.03f + x);             // leaves move in the wind
+    setColor(0.13f * k, 0.42f * k, 0.20f * k);
+    circle(x + sway, y + 30 * s, 15 * s); circle(x - 10 * s + sway, y + 22 * s, 11 * s); circle(x + 10 * s + sway, y + 22 * s, 11 * s);
+    setColor(0.22f * k, 0.58f * k, 0.28f * k);
+    circle(x - 4 * s + sway, y + 33 * s, 9 * s); circle(x - 12 * s + sway, y + 24 * s, 6 * s);
+}
+
+static void streetLamp(float x, float y) {
+    setColor(0.20f, 0.20f, 0.24f);
+    rect(x - 1.5f, y, x + 1.5f, y + 34);
+    rect(x - 1.5f, y + 32, x + 8, y + 35);
+    if (night) {
+        glow(x + 8, y + 30, 34, 1.0f, 0.85f, 0.45f, 0.45f);
+        glow(x + 8, y, 22, 1.0f, 0.85f, 0.45f, 0.20f);         // light on the ground
+        setColor(1.0f, 0.92f, 0.60f);
+    } else setColor(0.85f, 0.85f, 0.80f);
+    circle(x + 8, y + 31, 3.5f);
+}
+
+// coloured lights hanging between the two minarets, blinking at night
+static void minaretLights() {
+    float cc[4][3] = {{1,0.35f,0.35f},{0.4f,1,0.5f},{0.4f,0.7f,1},{1,0.85f,0.3f}};
+    setColor(0.2f, 0.2f, 0.2f);
+    glBegin(GL_LINE_STRIP);
+    for (int i = 0; i <= 20; i++) { float t = i / 20.0f; glVertex2f(309 + 182 * t, 694 - 40 * 4 * t * (1 - t)); }
+    glEnd();
+    for (int i = 0; i <= 14; i++) {
+        float t = i / 14.0f, x = 309 + 182 * t, y = 692 - 40 * 4 * t * (1 - t);
+        bool on = !night || ((frameNo / 12 + i) % 3 != 0);
+        float* c = cc[i % 4];
+        if (night && on) glow(x, y, 9, c[0], c[1], c[2], 0.6f);
+        glColor4f(c[0], c[1], c[2], on ? 1.0f : 0.35f);
+        circle(x, y, 2.6f);
+    }
+}
+
+// clouds and birds (drawn behind the mosque)
+void drawSkyLife() {
+    if (!night) {                                              // clouds and birds drift across the sky
+        cloud(fmod(frameNo * 0.20f + 60, 950) - 80, 735, 1.0f);
+        cloud(fmod(frameNo * 0.12f + 520, 950) - 80, 760, 0.75f);
+        cloud(fmod(frameNo * 0.16f + 300, 950) - 80, 690, 0.6f);
+        for (int i = 0; i < 4; i++) {
+            float bx = fmod(frameNo * 0.9f + i * 28, 950) - 80;
+            bird(bx, 650 + i * 7 + 5 * sin(frameNo * 0.05f + i), 5 * sin(frameNo * 0.35f + i));
+        }
+    }
+}
+
+// trees, street lamps and lights (drawn in front of the ground)
+void drawDecorations() {
+    float tr[12][3] = {{35,220,1.0f},{35,450,1.1f},{180,240,1.1f},{170,300,0.8f},{325,300,0.8f},
+                       {650,280,1.1f},{600,220,0.8f},{200,440,1.0f},{625,445,0.9f},{230,30,1.0f},
+                       {560,30,1.1f},{770,40,0.9f}};
+    for (int i = 0; i < 12; i++) tree(tr[i][0], tr[i][1], tr[i][2]);
+    float lp[6][2] = {{170,393},{380,393},{600,393},{170,52},{380,52},{600,52}};
+    for (int i = 0; i < 6; i++) streetLamp(lp[i][0], lp[i][1]);
+    minaretLights();
+}
+
+// ------------------------------------------------------------
+//  GIFT CARRIER: a boy in panjabi and tupi carrying a gift box
+//  uses translate + scale (face left or right) + rotate (arms and legs)
+// ------------------------------------------------------------
+static void limb(float x, float y, float angle, float len, float w) {
+    glPushMatrix();
+    glTranslatef(x, y, 0);
+    glRotatef(angle, 0, 0, 1);                                 // swing around the joint
+    rect(-w / 2, -len, w / 2, 0);
+    glPopMatrix();
+}
+
+void drawGiftBoy(float x, float y, float dirX, bool moving, bool hasGift) {
+    float swing = moving ? 28 * sin(frameNo * 0.35f) : 0;      // walking animation
+    float bob = moving ? fabs(sin(frameNo * 0.35f)) * 1.5f : 0;
+    glPushMatrix();
+    glTranslatef(x, y + bob, 0);
+    if (dirX < 0) glScalef(-1, 1, 1);                          // turn to face left
+    glScalef(0.75f, 0.75f, 1);
+
+    glColor4f(0, 0, 0, 0.25f);                                 // shadow
+    glBegin(GL_TRIANGLE_FAN); glVertex2f(0, -bob);
+    for (int i = 0; i <= 20; i++) { float t = 2 * PI * i / 20; glVertex2f(13 * cos(t), -bob + 3.5f * sin(t)); }
+    glEnd();
+
+    setColor(0.92f, 0.92f, 0.90f);                             // legs (pajama)
+    limb(-2, 26, swing, 24, 6);
+    limb(3, 26, -swing, 24, 6);
+    setColor(0.25f, 0.15f, 0.10f);                             // sandals
+    rect(-5 + 12 * sin(swing * PI / 180), 0, 3 + 12 * sin(swing * PI / 180), 3);
+
+    setColor(0.40f, 0.62f, 0.95f);                             // blue panjabi
+    glBegin(GL_QUADS);
+    glVertex2f(-10, 12); glVertex2f(10, 12); glVertex2f(8, 46); glVertex2f(-8, 46);
+    glEnd();
+    setColor(0.33f, 0.52f, 0.82f); rect(3, 12, 10, 46);        // shaded side
+    setColor(1.0f, 0.85f, 0.35f);                              // buttons
+    circle(0, 42, 1.1f); circle(0, 38, 1.1f); circle(0, 34, 1.1f);
+
+    setColor(0.36f, 0.56f, 0.88f);                             // back arm
+    limb(-6, 44, -swing * 0.8f, 20, 5);
+
+    setColor(0.80f, 0.58f, 0.42f);                             // head
+    rect(-2, 46, 2, 50);
+    circle(0, 57, 8);
+    setColor(0.08f, 0.06f, 0.05f); halfCircle(0, 59, 8);       // hair
+    setColor(0.98f, 0.98f, 0.96f); halfCircle(0, 61, 8.2f);    // tupi
+    setColor(0.85f, 0.85f, 0.82f); rect(-8.2f, 61, 8.2f, 62);
+    setColor(0.08f, 0.06f, 0.05f); circle(4, 57, 1.2f);        // eye
+    setColor(0.60f, 0.25f, 0.20f); rect(3, 52, 7, 53);         // smile
+
+    if (hasGift) {                                             // arm forward holding the gift box
+        setColor(0.40f, 0.62f, 0.95f); limb(5, 44, 70, 14, 5);
+        setColor(0.90f, 0.20f, 0.30f); rect(12, 30, 28, 44);
+        setColor(1.0f, 0.85f, 0.25f); rect(19, 30, 21, 44); rect(12, 36, 28, 38);
+        triangle(20, 44, 14, 49, 15, 43); triangle(20, 44, 26, 49, 25, 43);
+    } else {
+        setColor(0.40f, 0.62f, 0.95f); limb(5, 44, swing * 0.8f, 20, 5);
+    }
+    glPopMatrix();
+}
+
+// "Gift delivered!" message that floats up and fades
+int   popupFrames = 0;
+float popupX = 0, popupY = 0;
+int   lastGiftsLeft = 0;
+
+void drawPopup() {
+    if (popupFrames <= 0) return;
+    float a = popupFrames > 30 ? 1.0f : popupFrames / 30.0f;
+    float rise = (90 - popupFrames) * 0.5f;
+    float bx = popupX - 50, by = popupY + 45 + rise;
+    if (bx > 800 - 104) bx = 800 - 104;
+    if (bx < 4) bx = 4;
+    glColor4f(0.08f, 0.45f, 0.25f, 0.92f * a);
+    rect(bx, by, bx + 100, by + 22);
+    glColor4f(1, 0.85f, 0.3f, a);
+    rect(bx, by + 20, bx + 100, by + 22);
+    glColor4f(1, 1, 1, a);
+    drawText(bx + 10, by + 7, "Gift delivered!", GLUT_BITMAP_HELVETICA_12);
+}
+
 // sky, ground and everything behind the roads
 void drawBackground() {
     drawSkyAndGround();
+    drawSkyLife();
     drawEidgah();
     drawMosque();
-    // TODO (Ijma): people, mela, lanterns ...
+    drawDecorations();
 }
 
 // things drawn on top of the roads and houses
 void drawForeground() {
-    // TODO (Ijma): gift carrier (walking boy), "Gift delivered!" message
+    drawGiftBoy(walkerX, walkerY, cos(walkerAngle), walking, giftsLeft > 0);
+    drawPopup();
 }
 
 void sceneKey(unsigned char key) {
@@ -209,5 +388,10 @@ void sceneKey(unsigned char key) {
 }
 
 void sceneUpdate() {
-    // TODO (Ijma): animations that need updating every frame
+    if (giftsLeft < lastGiftsLeft) {                // a gift was just delivered
+        popupFrames = 90;
+        popupX = walkerX; popupY = walkerY;
+    }
+    lastGiftsLeft = giftsLeft;
+    if (popupFrames > 0) popupFrames--;
 }
