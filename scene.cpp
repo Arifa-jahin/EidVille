@@ -484,7 +484,7 @@ void toggleMusic() {
 // pause the song while the Eid prayer is going on, play again after it
 void updateMusic() {
     if (!music) return;
-    bool shouldPause = prayerTime();
+    bool shouldPause = prayerTime() && slide == 2;           // pause only while the prayer is shown in the town
     if (shouldPause == songPaused) return;
     songPaused = shouldPause;
 #ifdef _WIN32
@@ -666,7 +666,10 @@ static void foodCart(float x, float y) {
 static void houseLights(float x1, float x2, float y) {
     float cc[4][3] = {{1,0.35f,0.35f},{0.4f,1,0.5f},{0.4f,0.7f,1},{1,0.85f,0.3f}};
     setColor(0.2f, 0.2f, 0.2f);
+    glLineWidth(1.5f);
     glBegin(GL_LINE_STRIP); for (int i = 0; i <= 20; i++) { float t = i / 20.0f; glVertex2f(x1 + (x2 - x1) * t, y - 14 * 4 * t * (1 - t)); } glEnd();
+    glLineWidth(1);
+    setColor(0.35f, 0.25f, 0.2f); circle(x1, y, 2); circle(x2, y, 2);      // hooks on the walls
     for (int i = 1; i < 8; i++) {
         float t = i / 8.0f, lx = x1 + (x2 - x1) * t, ly = y - 14 * 4 * t * (1 - t) - 6;
         float* c = cc[i % 4];
@@ -680,8 +683,8 @@ static void houseLights(float x1, float x2, float y) {
 
 void drawStreetLife() {
     // lights between the houses on the upper road
-    houseLights(358, 497, 476);
-    houseLights(558, 737, 476);
+    houseLights(361, 494, 446);           // from the roof edge of house 3 to house 4
+    houseLights(561, 734, 446);           // from house 4 to house 5
     // families walking along the bottom of the town (more in the day)
     int groups = night ? 2 : 4;
     for (int g = 0; g < groups; g++) {
