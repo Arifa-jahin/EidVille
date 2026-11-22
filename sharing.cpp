@@ -83,9 +83,11 @@ static void strokeText(float cx, float y, const char* s, float scale, float lw) 
 
 // speech bubble (size fits the text) with a tail pointing at (tx,ty); (x, y) = bottom-left
 static int textW(const char* t, void* font) { int w = 0; for (; *t; t++) w += glutBitmapWidth(font, *t); return w; }
+// width of stroke-font text (stroke text scales with the window, so boxes always fit the words)
+static float strokeW(const char* t, float sc) { float w = 0; for (; *t; t++) w += glutStrokeWidth(GLUT_STROKE_ROMAN, *t); return w * sc; }
 static void bubble(float x, float y, float tx, float ty, const char* l1, const char* l2) {
-    float w = textW(l1, GLUT_BITMAP_HELVETICA_18);
-    if (l2 && textW(l2, GLUT_BITMAP_HELVETICA_12) > w) w = textW(l2, GLUT_BITMAP_HELVETICA_12);
+    float w = strokeW(l1, 0.13f);
+    if (l2 && strokeW(l2, 0.095f) > w) w = strokeW(l2, 0.095f);
     float x2 = x + w + 32, y2 = y + (l2 ? 56 : 38);
     col(0, 0, 0, 0.25f); roundRect(x + 3, y - 3, x2 + 3, y2 - 3, 12);
     col(1, 1, 1, 0.96f);
@@ -94,8 +96,8 @@ static void bubble(float x, float y, float tx, float ty, const char* l1, const c
     triangle(ex, y + 10, ex, y + 28, tx, ty);
     float mx = (x + x2) / 2;
     col(0.20f, 0.12f, 0.30f);
-    drawTextCentered(mx, y2 - 24, l1, GLUT_BITMAP_HELVETICA_18);
-    if (l2) { col(0.80f, 0.30f, 0.20f); drawTextCentered(mx, y2 - 44, l2, GLUT_BITMAP_HELVETICA_12); }
+    strokeText(mx, y2 - 26, l1, 0.13f, 2);
+    if (l2) { col(0.80f, 0.30f, 0.20f); strokeText(mx, y2 - 47, l2, 0.095f, 1.5f); }
 }
 
 // =================== people ===================
@@ -223,10 +225,10 @@ static void fairyLights(float x1, float y1, float x2, float y2, float sag, int n
 static const float WX[2] = {335, 605}, WY[3] = {420, 250, 80};   // bottom-left corner of each window
 static const float WW = 160, WH = 130;
 static const char* CAPTIONS[6] = {
-    "Khala receives a bowl of semai at her door...",
-    "Apu and her cousin put on mehedi...",
-    "Everyone enjoys the semai together...",
-    "Dadu gives Eid salami!",
+    "The aunt next door receives a bowl of semai...",
+    "Two sisters decorate their hands with henna...",
+    "The whole family enjoys the semai together...",
+    "Grandfather gives Eid money to the children!",
     "A gift reaches a poor home - the lamp is lit!",
     "Two friends hug each other: Eid Mubarak!"};
 
@@ -533,9 +535,9 @@ void drawSharing() {
     if (zo < 0.3f) {
         const char* cap = CAPTIONS[cur];
         float a = clamp01((f - cur * PER - 20) / 15) * (1 - zo / 0.3f);
-        float cw = textW(cap, GLUT_BITMAP_HELVETICA_18);
+        float cw = strokeW(cap, 0.13f);
         col(0.06f, 0.05f, 0.12f, 0.8f * a); roundRect(550 - cw / 2 - 22, 40, 550 + cw / 2 + 22, 74, 17);
-        col(1.0f, 0.92f, 0.70f, a); drawTextCentered(550, 51, cap, GLUT_BITMAP_HELVETICA_18);
+        col(1.0f, 0.92f, 0.70f, a); strokeText(550, 51, cap, 0.13f, 2);
     }
 
     // message after the zoom out
