@@ -125,6 +125,7 @@ void display() {
 
 void keyboard(unsigned char key, int, int) {
     if (key == 27) exit(0);   // ESC
+    if (key == 'm' || key == 'M') { sceneKey(key); return; }   // Eid song on / off on every slide
     if (slide == 2) {         // town keys only work on the town slide
         sceneKey(key);
         routeKey(key);
@@ -180,6 +181,7 @@ void init() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     routeInit();
+    sceneKey('m');           // the Eid song starts with the program
 }
 
 int main(int argc, char** argv) {
