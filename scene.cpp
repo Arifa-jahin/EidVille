@@ -659,7 +659,7 @@ static void foodCart(float x, float y) {
         triangle(x - 4 + i * 13, y + 52, x + 9 + i * 13, y + 52, x + 2.5f + i * 13, y + 60);
     }
     if (night) { setColor(1, 0.92f, 0.6f); circle(x + 22, y + 48, 3); }
-    setColor(1, 1, 1); drawTextCentered(x + 22, y + 16, "FUCHKA", GLUT_BITMAP_HELVETICA_10);
+    setColor(1, 1, 1); drawTextCentered(x + 22, y + 16, "SNACKS", GLUT_BITMAP_HELVETICA_10);
 }
 
 // paper lanterns and lights hanging between the houses
