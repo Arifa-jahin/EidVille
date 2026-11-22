@@ -1,5 +1,5 @@
 // ============================================================
-//  moonnight.cpp  -  Slide 1: Chand Raat (the Eid moon is seen)
+//  moonnight.cpp  -  Slide 1: Eid Moon Night (the Eid moon is seen)
 //  Owner: Arifa
 // ============================================================
 #include "common.h"
@@ -80,9 +80,11 @@ static void strokeText(float cx, float y, const char* s, float scale, float lw) 
 
 // speech bubble (size fits the text) with a tail pointing at (tx,ty); (x, y) = bottom-left
 static int textW(const char* t, void* font) { int w = 0; for (; *t; t++) w += glutBitmapWidth(font, *t); return w; }
+// width of stroke-font text (stroke text scales with the window, so boxes always fit the words)
+static float strokeW(const char* t, float sc) { float w = 0; for (; *t; t++) w += glutStrokeWidth(GLUT_STROKE_ROMAN, *t); return w * sc; }
 static void bubble(float x, float y, float tx, float ty, const char* l1, const char* l2) {
-    float w = textW(l1, GLUT_BITMAP_HELVETICA_18);
-    if (l2 && textW(l2, GLUT_BITMAP_HELVETICA_12) > w) w = textW(l2, GLUT_BITMAP_HELVETICA_12);
+    float w = strokeW(l1, 0.13f);
+    if (l2 && strokeW(l2, 0.095f) > w) w = strokeW(l2, 0.095f);
     float x2 = x + w + 32, y2 = y + (l2 ? 56 : 38);
     col(0, 0, 0, 0.25f); roundRect(x + 3, y - 3, x2 + 3, y2 - 3, 12);
     col(1, 1, 1, 0.96f);
@@ -91,8 +93,8 @@ static void bubble(float x, float y, float tx, float ty, const char* l1, const c
     triangle(ex, y + 10, ex, y + 28, tx, ty);
     float mx = (x + x2) / 2;
     col(0.20f, 0.12f, 0.30f);
-    drawTextCentered(mx, y2 - 24, l1, GLUT_BITMAP_HELVETICA_18);
-    if (l2) { col(0.80f, 0.30f, 0.20f); drawTextCentered(mx, y2 - 44, l2, GLUT_BITMAP_HELVETICA_12); }
+    strokeText(mx, y2 - 26, l1, 0.13f, 2);
+    if (l2) { col(0.80f, 0.30f, 0.20f); strokeText(mx, y2 - 47, l2, 0.095f, 1.5f); }
 }
 
 // =================== people ===================
@@ -367,7 +369,7 @@ static void teaStall(float x, float y) {
     col(0.9f, 0.9f, 0.9f, 0.45f); glLineWidth(2);
     float st = fmod(frameNo * 0.6f, 30);
     arcLine(x + 50, y + 74 + st, 3, 7, -PI / 2, PI / 2); arcLine(x + 54, y + 88 + st, 3, 7, PI / 2, PI * 1.5f); glLineWidth(1);
-    col(1, 1, 1); drawTextCentered(x + 45, y + 30, "CHA", GLUT_BITMAP_HELVETICA_12);
+    col(1, 1, 1); drawTextCentered(x + 45, y + 30, "TEA", GLUT_BITMAP_HELVETICA_12);
 }
 static void sparkler(float x, float y, int seed) {
     col(0.35f, 0.32f, 0.30f); thickLine(x, y, x + 6, y + 24, 1.5f);
@@ -501,7 +503,7 @@ void drawMoonNight() {
     for (int s = 0; s < 3; s++) for (int j = 0; j < 6; j++) { float* c = jar[(s + j) % 4]; col(c[0], c[1], c[2]); rect(204 + j * 18, 219 + s * 22, 214 + j * 18, 233 + s * 22); }
     col(0.55f, 0.55f, 0.58f); rect(190, 280, 320, 292);
     for (int s = 0; s < 4; s++) { col(0.45f, 0.45f, 0.48f); rect(190, 282 + s * 3, 320, 283 + s * 3); }
-    col(0.10f, 0.45f, 0.35f); rect(185, 292, 325, 318); col(1, 1, 1); drawTextCentered(255, 300, "MAYER DOA STORE", GLUT_BITMAP_HELVETICA_12);
+    col(0.10f, 0.45f, 0.35f); rect(185, 292, 325, 318); col(1, 1, 1); drawTextCentered(255, 300, "CORNER STORE", GLUT_BITMAP_HELVETICA_12);
     glow(255, 250, 90, 1, 0.8f, 0.4f, 0.25f);
 
     // ---- mosque ----
@@ -633,8 +635,8 @@ void drawMoonNight() {
 
     // ---- speech bubbles from the mosque speaker ----
     if (f > 190) {
-        bubble(355, 650, 632, 708, "Eid er chand dekha geche!", "Eid Mubarak! Eid Mubarak!");
-        bubble(722, 640, 700, 706, "Agamikal Eid-er jamaat", 0);
+        bubble(330, 650, 632, 708, "The Eid moon has been sighted!", "Eid Mubarak! Eid Mubarak!");
+        bubble(722, 640, 700, 706, "Eid prayer tomorrow morning", 0);
     }
     // ---- soft vignette for a cinematic look ----
     hgrad(0, 0, 80, WIN_H, 0, 0, 0, 0.35f, 0, 0, 0, 0);
@@ -648,17 +650,17 @@ void drawMoonNight() {
     }
 
     // ---- slide label (top left) ----
-    col(0.08f, 0.06f, 0.16f, 0.75f); roundRect(14, 752, 200, 786, 14);
+    col(0.08f, 0.06f, 0.16f, 0.75f); roundRect(14, 752, 222, 786, 14);
     col(1.0f, 0.82f, 0.35f); circle(36, 769, 10);
     col(0.15f, 0.10f, 0.25f); drawTextCentered(36, 764, "1", GLUT_BITMAP_HELVETICA_12);
-    col(1, 1, 1); drawText(54, 764, "Chand Raat", GLUT_BITMAP_HELVETICA_18);
+    col(1, 1, 1); strokeText(136, 762, "Eid Moon Night", 0.13f, 2);
 
     // ---- story caption (bottom) ----
     const char* cap = f < 60  ? "The sun has set. Everyone is waiting..."
                     : f < 180 ? "People search the sky for the thin Eid moon..."
                     : f < 300 ? "There it is! The Eid moon is seen!"
                     :           "Eid Mubarak! Tomorrow is Eid.";
-    float cw = textW(cap, GLUT_BITMAP_HELVETICA_18);
+    float cw = strokeW(cap, 0.13f);
     col(0.06f, 0.05f, 0.12f, 0.78f); roundRect(550 - cw / 2 - 22, 32, 550 + cw / 2 + 22, 64, 16);
-    col(1.0f, 0.92f, 0.70f); drawTextCentered(550, 42, cap, GLUT_BITMAP_HELVETICA_18);
+    col(1.0f, 0.92f, 0.70f); strokeText(550, 42, cap, 0.13f, 2);
 }
